@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rules xmlns:android="http://schemas.android.com/apk/res/android">
+    <domain-config>
+        <domain includeSubdomains="true">example.com</domain>
+        <exclude-domain includeSubdomains="true">example.com</exclude-domain>
+    </domain-config>
+</rules>
