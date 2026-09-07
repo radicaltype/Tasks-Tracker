@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTask(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && (!('description' in data) || data.description == null || (data.description is string && data.description.size() <= 2000))
+        && (!('dueDate' in data) || data.dueDate == null || (data.dueDate is string && data.dueDate.size() <= 100))
+        && (!('location' in data) || data.location == null || (data.location is string && data.location.size() <= 200))
+        && (!('priority' in data) || data.priority == null || data.priority in ['Low', 'Medium', 'High'])
+        && (!('category' in data) || data.category == null || (data.category is string && data.category.size() <= 50))
+        && (!('subtasks' in data) || data.subtasks == null || data.subtasks is list)
+        && (!('reminder' in data) || data.reminder == null || data.reminder is map)
+        && data.completed is bool
+        && (data.timerTotalSeconds is int || data.timerTotalSeconds is number)
+        && data.createdAt is string
+        && data.userId == request.auth.uid;
+    }
+
+    match /tasks/{taskId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() 
+        && isValidId(taskId)
+        && isValidTask(request.resource.data)
+        && request.resource.data.userId == request.auth.uid;
+        
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && isValidTask(request.resource.data)
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'description', 'dueDate', 'location', 'completed', 'timerTotalSeconds', 'subtasks', 'reminder', 'priority', 'category'
+        ]);
+        
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

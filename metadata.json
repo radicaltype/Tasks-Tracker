@@ -1,0 +1,11 @@
+{
+  "name": "Tasks Tracker",
+  "description": "A task manager and timer app for tracking your projects and to-do lists, with time and day reminders, location-based geofence alerts, subtasks, stopwatch timers, and productivity stats.",
+  "requestFramePermissions": [
+    "geolocation",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

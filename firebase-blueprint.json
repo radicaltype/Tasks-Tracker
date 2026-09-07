@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "Task": {
+      "title": "Task",
+      "description": "A single task or to-do item",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the task"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the task"
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date and time when the task is due"
+        },
+        "location": {
+          "type": "string",
+          "description": "Location associated with the task"
+        },
+        "subtasks": {
+          "type": "array",
+          "description": "List of subtasks"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["Low", "Medium", "High"],
+          "description": "Priority level of the task"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Work", "Personal", "Home", "Errands", "Pay It Forward", "Friends", "Family", "Appointments", "Projects"],
+          "description": "Category of the task"
+        },
+        "reminder": {
+          "type": "object",
+          "description": "Time, day, and location reminder configurations"
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Whether the task is checked off"
+        },
+        "timerTotalSeconds": {
+          "type": "integer",
+          "description": "Total time spent on the task in seconds"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the task was created"
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the owner"
+        }
+      },
+      "required": [
+        "title",
+        "userId",
+        "completed",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "tasks": {
+      "schema": "Task",
+      "description": "User tasks"
+    }
+  }
+}
