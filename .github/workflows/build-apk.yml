@@ -13,14 +13,52 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Figure out which framework this is and which Java version it needs
+      - name: Detect project type
+        id: detect
+        run: |
+          JAVA=17
+          if ls capacitor.config.* >/dev/null 2>&1; then
+            echo "type=capacitor" >> $GITHUB_OUTPUT
+            CAP_MAJOR=$(node -p "((require('./package.json').dependencies||{})['@capacitor/android']||'0').replace(/[^0-9.]/g,'').split('.')[0]||0")
+            if [ "$CAP_MAJOR" -ge 7 ]; then JAVA=21; fi
+            echo "Detected Capacitor (v$CAP_MAJOR)"
+          else
+            echo "type=other" >> $GITHUB_OUTPUT
+            echo "Detected React Native / other JS project"
+          fi
+          echo "java=$JAVA" >> $GITHUB_OUTPUT
+          echo "Using Java $JAVA"
+
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: ${{ steps.detect.outputs.java }}
 
-      # GitHub's Ubuntu runners already ship with the Android SDK,
-      # so no setup-android step is needed.
+      - name: Install JavaScript dependencies
+        run: |
+          if [ -f yarn.lock ]; then
+            corepack enable && yarn install
+          elif [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      # Capacitor apps: build the web app, then copy it into the android folder
+      - name: Build web assets and sync (Capacitor only)
+        if: steps.detect.outputs.type == 'capacitor'
+        run: |
+          npm run build --if-present
+          npx cap sync android
+
+      # GitHub's Ubuntu runners already ship with the Android SDK
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
