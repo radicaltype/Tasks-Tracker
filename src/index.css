@@ -1,1 +1,151 @@
 @import "tailwindcss";
+
+/* Rich Text Notes Styling */
+.rich-notes-content {
+  font-family: inherit;
+  color: #1f2937;
+  line-height: 1.65;
+  font-size: 0.925rem;
+}
+
+.rich-notes-content:focus {
+  outline: none;
+}
+
+.rich-notes-content[data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.rich-notes-content h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.rich-notes-content h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.015em;
+  margin-top: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.rich-notes-content h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #334155;
+  margin-top: 0.85rem;
+  margin-bottom: 0.35rem;
+}
+
+.rich-notes-content p {
+  margin-bottom: 0.65rem;
+}
+
+.rich-notes-content ul {
+  list-style-type: disc;
+  padding-left: 1.4rem;
+  margin-top: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+.rich-notes-content ol {
+  list-style-type: decimal;
+  padding-left: 1.4rem;
+  margin-top: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+.rich-notes-content li {
+  margin-bottom: 0.25rem;
+  line-height: 1.55;
+}
+
+.rich-notes-content blockquote {
+  border-left: 3.5px solid #6366f1;
+  background-color: #f8fafc;
+  padding: 0.6rem 0.85rem;
+  margin: 0.75rem 0;
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: #475569;
+  font-style: italic;
+}
+
+.rich-notes-content pre {
+  background-color: #0f172a;
+  color: #f1f5f9;
+  padding: 0.85rem 1rem;
+  border-radius: 0.6rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.825rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+.rich-notes-content code {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.rich-notes-content pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+.rich-notes-content hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 1.25rem 0;
+}
+
+.rich-notes-content a {
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.rich-notes-content a:hover {
+  color: #1d4ed8;
+}
+
+.rich-notes-content .note-callout {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  margin: 0.75rem 0;
+  font-size: 0.875rem;
+  border: 1px solid;
+}
+
+.rich-notes-content .note-callout-info {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.rich-notes-content .note-callout-success {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.rich-notes-content .note-callout-warning {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}

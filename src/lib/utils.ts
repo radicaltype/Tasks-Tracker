@@ -61,6 +61,29 @@ export const TASK_CATEGORIES = [
 
 export type TaskCategoryType = typeof TASK_CATEGORIES[number];
 
+export const SUGGESTED_TAGS = [
+  'urgent',
+  'deep-work',
+  'quick-win',
+  'follow-up',
+  'waiting',
+  'research',
+  'client',
+  'finance',
+] as const;
+
+/**
+ * Normalizes a custom tag string: trims whitespace, removes leading '#', collapses spaces to '-', and limits to 30 chars.
+ */
+export function normalizeTag(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^#+/, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 30);
+}
+
 export function getCategoryConfig(category?: string | null) {
   if (!category) return null;
   const normalized = category.trim().toLowerCase();

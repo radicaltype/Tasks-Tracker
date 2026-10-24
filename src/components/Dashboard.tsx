@@ -26,7 +26,8 @@ import {
   CheckCircle,
   BarChart2,
   Flag,
-  Tag
+  Tag,
+  ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Task } from '../types';
@@ -36,6 +37,7 @@ import { startOfDay, subDays, isSameDay, format } from 'date-fns';
 interface DashboardProps {
   tasks: Task[];
   onBack: () => void;
+  onOpenDiagnostics?: () => void;
 }
 
 const MOTIVATIONAL_TIPS = [
@@ -81,7 +83,7 @@ const MOTIVATIONAL_TIPS = [
   }
 ];
 
-export default function Dashboard({ tasks, onBack }: DashboardProps) {
+export default function Dashboard({ tasks, onBack, onOpenDiagnostics }: DashboardProps) {
   const [tipIndex, setTipIndex] = useState(0);
   const [isTipRotating, setIsTipRotating] = useState(false);
 
@@ -543,6 +545,33 @@ export default function Dashboard({ tasks, onBack }: DashboardProps) {
             </div>
           </div>
         </motion.div>
+
+        {/* ANDROID APK & FIREBASE AUTH STATUS SECTION */}
+        {onOpenDiagnostics && (
+          <div className="bg-neutral-50 border border-neutral-200/80 rounded-3xl p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-700">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-neutral-900 leading-tight">Firebase Auth &amp; APK Diagnostics</h4>
+                  <p className="text-[11px] text-neutral-500">Verify SHA-1 fingerprint &amp; Google Sign-In setup</p>
+                </div>
+              </div>
+              <button
+                onClick={onOpenDiagnostics}
+                className="px-3 py-1.5 rounded-xl bg-neutral-900 text-white font-bold text-xs hover:bg-neutral-800 transition-colors shadow-xs"
+              >
+                Inspect
+              </button>
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-neutral-600 bg-white border border-neutral-200 rounded-xl px-3 py-2">
+              <span>Firebase: <strong className="font-mono text-neutral-900">iconsouth-engine</strong></span>
+              <span className="text-amber-700 font-semibold">Package: app.tasktracker</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

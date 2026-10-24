@@ -43,6 +43,16 @@ export interface TaskReminder {
 
 export type Priority = 'Low' | 'Medium' | 'High';
 
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly';
+
+export interface RecurrenceRule {
+  frequency: RecurrenceFrequency; // 'daily' | 'weekly' | 'monthly'
+  interval: number; // e.g., 1 (every 1 day/week/month), 2 (every 2 weeks), etc.
+  weekDays?: number[]; // For weekly recurrence: [0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat]
+  endDate?: string; // Optional end date as ISO string (YYYY-MM-DD or ISO)
+  timesRepeated?: number; // Count of occurrences generated
+}
+
 export type TaskCategory = 
   | 'Work'
   | 'Personal'
@@ -62,12 +72,18 @@ export interface Task {
   location: string;
   priority?: Priority;
   category?: TaskCategory;
+  tags?: string[]; // Custom user-defined tags or labels
   completed: boolean;
   timerTotalSeconds: number;
   createdAt: string; // ISO string
   userId: string;
   subtasks?: SubTask[];
   reminder?: TaskReminder;
+  recurrence?: RecurrenceRule;
+  recurrenceParentId?: string; // If this task was spawned from a recurring schedule
+  completedAt?: string; // ISO string when completed
+  notes?: string; // Rich text notes (HTML/formatted string for meeting minutes, project drafts, etc.)
+  notesUpdatedAt?: string; // ISO string timestamp of the last note edit
 }
 
 export type View = 'list' | 'add' | 'details' | 'dashboard';

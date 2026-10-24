@@ -1,27 +1,35 @@
 import { useState, FormEvent, useRef } from 'react';
-import { ArrowLeft, Calendar, MapPin, AlignLeft, Send, ListCheck, Plus, Trash2, Edit3, Flag, Tag, Mic, MicOff } from 'lucide-react';
-import type { Task, SubTask, TaskReminder, Priority, TaskCategory } from '../types';
+import { ArrowLeft, Calendar, MapPin, AlignLeft, Send, ListCheck, Plus, Trash2, Edit3, Flag, Tag, Hash, Mic, MicOff, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import type { Task, SubTask, TaskReminder, Priority, TaskCategory, RecurrenceRule } from '../types';
 import { cn, TASK_CATEGORIES, getCategoryConfig } from '../lib/utils';
 import SubtaskModal from './SubtaskModal';
 import ReminderFormSection from './ReminderFormSection';
+import { RecurrenceSelector } from './RecurrenceSelector';
+import TaskRichNotes from './TaskRichNotes';
+import TagManagerInput from './TagManagerInput';
 
 interface AddTaskFormProps {
   onAdd: (task: Omit<Task, 'id' | 'userId' | 'createdAt'>) => Promise<void> | void;
   onCancel: () => void;
   userCoords?: { lat: number; lng: number } | null;
+  existingTags?: string[];
 }
 
-export default function AddTaskForm({ onAdd, onCancel, userCoords }: AddTaskFormProps) {
+export default function AddTaskForm({ onAdd, onCancel, userCoords, existingTags = [] }: AddTaskFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('Medium');
   const [category, setCategory] = useState<TaskCategory | undefined>('Work');
+  const [tags, setTags] = useState<string[]>([]);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [location, setLocation] = useState('');
   const [subtasks, setSubtasks] = useState<SubTask[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [reminder, setReminder] = useState<TaskReminder | undefined>(undefined);
+  const [recurrence, setRecurrence] = useState<RecurrenceRule | undefined>(undefined);
+  const [notes, setNotes] = useState<string>('');
+  const [showNotes, setShowNotes] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Subtask modal state
@@ -123,10 +131,13 @@ export default function AddTaskForm({ onAdd, onCancel, userCoords }: AddTaskForm
         location: location.trim(),
         priority,
         category: category || 'Work',
+        tags,
         completed: false,
         timerTotalSeconds: 0,
         subtasks,
         reminder,
+        recurrence,
+        notes: notes.trim() || undefined,
       });
     } catch (err) {
       console.error("Error creating task:", err);
@@ -221,6 +232,20 @@ export default function AddTaskForm({ onAdd, onCancel, userCoords }: AddTaskForm
                   );
                 })}
               </div>
+            </div>
+          </div>
+
+          {/* Custom Tags / Labels Manager */}
+          <div className="flex items-start gap-4">
+            <div className="p-2 bg-neutral-50 rounded-xl text-neutral-400">
+              <Hash size={20} />
+            </div>
+            <div className="flex-1">
+              <TagManagerInput
+                tags={tags}
+                onChange={setTags}
+                existingTags={existingTags}
+              />
             </div>
           </div>
 
@@ -397,6 +422,12 @@ export default function AddTaskForm({ onAdd, onCancel, userCoords }: AddTaskForm
             </div>
           </div>
 
+          <RecurrenceSelector
+            rule={recurrence}
+            onChange={setRecurrence}
+            baseDueDate={computedDueDate}
+          />
+
           <ReminderFormSection
             reminder={reminder}
             taskDueDate={computedDueDate}
@@ -404,6 +435,43 @@ export default function AddTaskForm({ onAdd, onCancel, userCoords }: AddTaskForm
             onChange={setReminder}
             userCoords={userCoords}
           />
+
+          {/* Optional Rich Text Notes Section */}
+          <div className="pt-2 border-t border-neutral-100">
+            <button
+              type="button"
+              onClick={() => setShowNotes(!showNotes)}
+              className="w-full flex items-center justify-between py-2 text-left group"
+            >
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-teal-50 text-teal-600 rounded-lg group-hover:bg-teal-100 transition-colors">
+                  <FileText size={16} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-neutral-800 block">
+                    Rich Notes & Meeting Minutes (Optional)
+                  </span>
+                  <span className="text-[10px] text-neutral-400 font-medium">
+                    {notes ? 'Notes added' : 'Draft minutes, specifications, or scratchpad'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-neutral-400 group-hover:text-neutral-700">
+                {showNotes ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </div>
+            </button>
+
+            {showNotes && (
+              <div className="mt-3">
+                <TaskRichNotes
+                  initialNotes={notes}
+                  taskTitle={title || 'New Task'}
+                  onSave={(notesHtml) => setNotes(notesHtml)}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </form>
 

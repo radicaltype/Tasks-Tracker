@@ -16,12 +16,18 @@ service cloud.firestore {
     function isValidTask(data) {
       return data.title is string && data.title.size() > 0 && data.title.size() <= 200
         && (!('description' in data) || data.description == null || (data.description is string && data.description.size() <= 2000))
+        && (!('notes' in data) || data.notes == null || (data.notes is string && data.notes.size() <= 50000))
+        && (!('notesUpdatedAt' in data) || data.notesUpdatedAt == null || (data.notesUpdatedAt is string && data.notesUpdatedAt.size() <= 100))
         && (!('dueDate' in data) || data.dueDate == null || (data.dueDate is string && data.dueDate.size() <= 100))
         && (!('location' in data) || data.location == null || (data.location is string && data.location.size() <= 200))
         && (!('priority' in data) || data.priority == null || data.priority in ['Low', 'Medium', 'High'])
         && (!('category' in data) || data.category == null || (data.category is string && data.category.size() <= 50))
+        && (!('tags' in data) || data.tags == null || (data.tags is list && data.tags.size() <= 20 && (data.tags.size() == 0 || (data.tags[0] is string && data.tags[0].size() <= 50))))
         && (!('subtasks' in data) || data.subtasks == null || data.subtasks is list)
         && (!('reminder' in data) || data.reminder == null || data.reminder is map)
+        && (!('recurrence' in data) || data.recurrence == null || data.recurrence is map)
+        && (!('recurrenceParentId' in data) || data.recurrenceParentId == null || (data.recurrenceParentId is string && data.recurrenceParentId.size() <= 128))
+        && (!('completedAt' in data) || data.completedAt == null || (data.completedAt is string && data.completedAt.size() <= 100))
         && data.completed is bool
         && (data.timerTotalSeconds is int || data.timerTotalSeconds is number)
         && data.createdAt is string
@@ -43,7 +49,7 @@ service cloud.firestore {
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'title', 'description', 'dueDate', 'location', 'completed', 'timerTotalSeconds', 'subtasks', 'reminder', 'priority', 'category'
+          'title', 'description', 'notes', 'notesUpdatedAt', 'dueDate', 'location', 'completed', 'completedAt', 'timerTotalSeconds', 'subtasks', 'reminder', 'priority', 'category', 'tags', 'recurrence', 'recurrenceParentId'
         ]);
         
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;

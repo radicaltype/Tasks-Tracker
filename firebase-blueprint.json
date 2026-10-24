@@ -36,6 +36,10 @@
           "enum": ["Work", "Personal", "Home", "Errands", "Pay It Forward", "Friends", "Family", "Appointments", "Projects"],
           "description": "Category of the task"
         },
+        "tags": {
+          "type": "array",
+          "description": "Custom user-defined tags or labels for categorizing tasks"
+        },
         "reminder": {
           "type": "object",
           "description": "Time, day, and location reminder configurations"
@@ -52,6 +56,15 @@
           "type": "string",
           "format": "date-time",
           "description": "When the task was created"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Rich text notes, meeting minutes, project drafts, or documentation"
+        },
+        "notesUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When notes were last updated"
         },
         "userId": {
           "type": "string",

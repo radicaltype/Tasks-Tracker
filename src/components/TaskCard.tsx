@@ -14,11 +14,15 @@ import {
   Edit3, 
   Trash2,
   AlignLeft,
-  Bell
+  Bell,
+  Repeat,
+  FileText,
+  RotateCcw
 } from 'lucide-react';
 import type { Task, SubTask } from '../types';
 import { cn, formatTime, getGoogleMapsUrl, getGoogleCalendarUrl, getPriorityConfig, getCategoryConfig } from '../lib/utils';
 import { getReminderSummary } from '../lib/reminderUtils';
+import { getRecurrenceDescription } from '../lib/recurrenceUtils';
 import { motion, AnimatePresence } from 'motion/react';
 import SubtaskModal from './SubtaskModal';
 
@@ -27,12 +31,17 @@ interface TaskCardProps {
   onToggle: (taskId: string, completed: boolean) => void;
   onClick: (task: Task) => void;
   onUpdateTask?: (taskId: string, updates: Partial<Task>) => void;
+  onDelete?: (taskId: string) => void;
+  onSelectTag?: (tag: string) => void;
+  selectedTag?: string;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle, onClick, onUpdateTask }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle, onClick, onUpdateTask, onDelete, onSelectTag, selectedTag }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [editingSubtask, setEditingSubtask] = useState<SubTask | null>(null);
   const [isAddSubtaskOpen, setIsAddSubtaskOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const subtasks = task.subtasks || [];
   const totalSubtasks = subtasks.length;
@@ -79,35 +88,115 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle, onClick, onUpdateTa
 
   return (
     <>
-      <motion.div
-        layout
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className={cn(
-          "group relative bg-white border border-neutral-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all mb-3 overflow-hidden",
-          priorityConfig && !task.completed && `border-l-4 ${priorityConfig.borderClass}`,
-          task.completed && "opacity-60"
-        )}
-      >
-        <div 
-          className="flex items-start gap-4 cursor-pointer"
-          onClick={() => onClick(task)}
-        >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
+      <div className="relative mb-3 rounded-3xl overflow-hidden select-none">
+        {/* Swipe action underlay revealed when dragging */}
+        <div className="absolute inset-0 flex pointer-events-none rounded-3xl overflow-hidden">
+          {/* Swiping right -> Mark Completed / Reopen */}
+          <div className="w-1/2 bg-emerald-600 text-white flex items-center justify-start pl-6 gap-2 font-bold text-xs tracking-wide">
+            {task.completed ? <RotateCcw size={20} /> : <CheckCircle2 size={20} />}
+            <span>{task.completed ? 'Reopen' : 'Complete'}</span>
+          </div>
+          {/* Swiping left -> Delete */}
+          <div className="w-1/2 bg-rose-600 text-white flex items-center justify-end pr-6 gap-2 font-bold text-xs tracking-wide">
+            <span>Delete</span>
+            <Trash2 size={20} />
+          </div>
+        </div>
+
+        {/* Foreground Draggable Task Card */}
+        <motion.div
+          layout
+          drag={isExpanded ? false : "x"}
+          dragDirectionLock
+          dragSnapToOrigin
+          dragConstraints={{ left: -140, right: 140 }}
+          dragElastic={0.25}
+          onDragStart={() => setIsDragging(true)}
+          onDragEnd={(_, info) => {
+            setTimeout(() => setIsDragging(false), 60);
+            if (info.offset.x > 70) {
               onToggle(task.id, !task.completed);
-            }}
-            className="mt-1 transition-transform active:scale-90"
-          >
-            {task.completed ? (
-              <CheckCircle2 className="text-emerald-500" size={24} />
-            ) : (
-              <Circle className="text-neutral-300" size={24} />
+            } else if (info.offset.x < -70) {
+              setConfirmDelete(true);
+            }
+          }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className={cn(
+            "group relative bg-white border border-neutral-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all overflow-hidden touch-pan-y",
+            priorityConfig && !task.completed && `border-l-4 ${priorityConfig.borderClass}`,
+            task.completed && "opacity-60"
+          )}
+        >
+          {/* Inline Delete Confirmation Overlay */}
+          <AnimatePresence>
+            {confirmDelete && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                className="absolute inset-0 z-30 bg-neutral-900/95 backdrop-blur-xs text-white rounded-3xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                    <Trash2 size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate max-w-[220px]">
+                      Delete "{task.title}"?
+                    </p>
+                    <p className="text-[11px] text-neutral-400">Remove directly from list.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="px-3.5 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onDelete) onDelete(task.id);
+                      setConfirmDelete(false);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors shadow-xs flex items-center gap-1.5"
+                  >
+                    <Trash2 size={13} />
+                    <span>Delete</span>
+                  </button>
+                </div>
+              </motion.div>
             )}
-          </button>
+          </AnimatePresence>
+
+          <div 
+            className="flex items-start gap-4 cursor-pointer"
+            onClick={() => {
+              if (isDragging) return;
+              onClick(task);
+            }}
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle(task.id, !task.completed);
+              }}
+              className="mt-1 transition-transform active:scale-90 hover:opacity-85"
+              title={task.completed ? "Mark as active" : "Mark as completed"}
+              aria-label={task.completed ? "Mark as active" : "Mark as completed"}
+            >
+              {task.completed ? (
+                <CheckCircle2 className="text-emerald-500" size={24} />
+              ) : (
+                <Circle className="text-neutral-300 hover:text-emerald-500" size={24} />
+              )}
+            </button>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
@@ -168,6 +257,17 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle, onClick, onUpdateTa
                 </a>
               )}
 
+              {/* Recurrence Badge */}
+              {task.recurrence && (
+                <div 
+                  className="flex items-center gap-1 text-[11px] text-purple-700 bg-purple-50/90 border border-purple-200/80 px-2 py-0.5 rounded-full font-medium"
+                  title={getRecurrenceDescription(task.recurrence)}
+                >
+                  <Repeat size={11} className="text-purple-600 shrink-0" />
+                  <span className="truncate max-w-[130px]">{getRecurrenceDescription(task.recurrence)}</span>
+                </div>
+              )}
+
               {/* Reminders Badges */}
               {reminderSummary.timeSummary && (
                 <div 
@@ -209,6 +309,16 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle, onClick, onUpdateTa
                 {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
               </button>
 
+              {task.notes && task.notes.replace(/<[^>]*>/g, '').trim().length > 0 && (
+                <div 
+                  className="flex items-center gap-1 text-[11px] text-teal-700 bg-teal-50/90 border border-teal-100/80 px-2 py-0.5 rounded-full font-medium"
+                  title="Task has rich text notes / documentation"
+                >
+                  <FileText size={11} className="text-teal-600 shrink-0" />
+                  <span>Notes</span>
+                </div>
+              )}
+
               {task.timerTotalSeconds > 0 && (
                 <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-full">
                   <Clock size={12} />
@@ -216,9 +326,82 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle, onClick, onUpdateTa
                 </div>
               )}
             </div>
+
+            {/* Custom Tags Row */}
+            {task.tags && task.tags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {task.tags.map((tag) => {
+                  const isTagActive = selectedTag && selectedTag.toLowerCase() === tag.toLowerCase();
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onSelectTag) onSelectTag(tag);
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-0.5 text-[11px] font-medium px-2 py-0.5 rounded-md transition-colors border",
+                        isTagActive
+                          ? "bg-neutral-900 text-white border-neutral-900"
+                          : "bg-neutral-50 text-neutral-600 border-neutral-200/80 hover:bg-neutral-100 hover:text-neutral-900"
+                      )}
+                      title={`Filter by #${tag}`}
+                    >
+                      <span className="opacity-60">#</span>
+                      <span>{tag}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          <ChevronRight className="text-neutral-300 self-center group-hover:text-neutral-500 group-hover:translate-x-1 transition-all" size={20} />
+          {/* Right Action Icons: Quick Action Buttons & Details Chevron */}
+          <div className="flex items-center gap-1 shrink-0 self-center">
+            {/* Quick Action Button: Toggle Completion */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle(task.id, !task.completed);
+              }}
+              className={cn(
+                "p-2 rounded-xl transition-all",
+                task.completed
+                  ? "text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100"
+                  : "text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 active:scale-95"
+              )}
+              title={task.completed ? "Reopen task" : "Quick complete"}
+              aria-label={task.completed ? "Reopen task" : "Quick complete"}
+            >
+              {task.completed ? <RotateCcw size={16} /> : <CheckCircle2 size={16} />}
+            </button>
+
+            {/* Quick Action Button: Delete directly from list view */}
+            {onDelete && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmDelete(true);
+                }}
+                className="p-2 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 rounded-xl transition-colors active:scale-95"
+                title="Quick delete task"
+                aria-label="Quick delete task"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+
+            {/* Open Details Chevron */}
+            <div 
+              className="p-1 text-neutral-300 group-hover:text-neutral-500 group-hover:translate-x-1 transition-all"
+              title="View task details"
+            >
+              <ChevronRight size={20} />
+            </div>
+          </div>
         </div>
 
         {/* EXPANDABLE SUBTASKS SECTION ON MAIN SCREEN */}
@@ -366,6 +549,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle, onClick, onUpdateTa
           )}
         </AnimatePresence>
       </motion.div>
+      </div>
 
       {/* Subtask Edit/Add Modal */}
       {(editingSubtask || isAddSubtaskOpen) && (

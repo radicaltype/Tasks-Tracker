@@ -22,14 +22,21 @@ import {
   Volume2,
   Navigation,
   Flag,
-  Tag
+  Tag,
+  Hash,
+  Repeat,
+  FileText
 } from 'lucide-react';
-import type { Task, SubTask, TaskReminder, Priority, TaskCategory } from '../types';
-import { cn, formatTime, getGoogleMapsUrl, getGoogleCalendarUrl, downloadIcsFile, getPriorityConfig, getCategoryConfig, TASK_CATEGORIES } from '../lib/utils';
+import type { Task, SubTask, TaskReminder, Priority, TaskCategory, RecurrenceRule } from '../types';
+import { cn, formatTime, getGoogleMapsUrl, getGoogleCalendarUrl, downloadIcsFile, getPriorityConfig, getCategoryConfig, TASK_CATEGORIES, normalizeTag } from '../lib/utils';
 import { getReminderSummary, playReminderChime, triggerBrowserNotification, formatDistance, calculateDistance } from '../lib/reminderUtils';
+import { getRecurrenceDescription } from '../lib/recurrenceUtils';
 import Timer from './Timer';
 import SubtaskModal from './SubtaskModal';
 import ReminderFormSection from './ReminderFormSection';
+import { RecurrenceSelector } from './RecurrenceSelector';
+import TaskRichNotes from './TaskRichNotes';
+import TagManagerInput from './TagManagerInput';
 
 interface TaskDetailsProps {
   task: Task;
@@ -37,11 +44,13 @@ interface TaskDetailsProps {
   onUpdate: (taskId: string, updates: Partial<Task>) => void;
   onDelete: (taskId: string) => void;
   userCoords?: { lat: number; lng: number } | null;
+  existingTags?: string[];
 }
 
-export default function TaskDetails({ task, onBack, onUpdate, onDelete, userCoords }: TaskDetailsProps) {
+export default function TaskDetails({ task, onBack, onUpdate, onDelete, userCoords, existingTags = [] }: TaskDetailsProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [quickTagInput, setQuickTagInput] = useState('');
 
   // Subtask Modal & state
   const [editingSubtask, setEditingSubtask] = useState<SubTask | null>(null);
@@ -52,20 +61,26 @@ export default function TaskDetails({ task, onBack, onUpdate, onDelete, userCoor
   const [description, setDescription] = useState(task.description || '');
   const [priority, setPriority] = useState<Priority>(task.priority || 'Medium');
   const [category, setCategory] = useState<TaskCategory | undefined>(task.category);
+  const [editingTags, setEditingTags] = useState<string[]>(task.tags || []);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [location, setLocation] = useState(task.location || '');
   const [editingSubtasks, setEditingSubtasks] = useState<SubTask[]>(task.subtasks || []);
   const [editingReminder, setEditingReminder] = useState<TaskReminder | undefined>(task.reminder);
+  const [editingRecurrence, setEditingRecurrence] = useState<RecurrenceRule | undefined>(task.recurrence);
+  const [editingNotes, setEditingNotes] = useState<string>(task.notes || '');
 
   useEffect(() => {
     setTitle(task.title);
     setDescription(task.description || '');
     setPriority(task.priority || 'Medium');
     setCategory(task.category);
+    setEditingTags(task.tags || []);
     setLocation(task.location || '');
     setEditingSubtasks(task.subtasks || []);
     setEditingReminder(task.reminder);
+    setEditingRecurrence(task.recurrence);
+    setEditingNotes(task.notes || '');
 
     if (task.dueDate) {
       try {
@@ -107,8 +122,12 @@ export default function TaskDetails({ task, onBack, onUpdate, onDelete, userCoor
       location: location.trim(),
       priority,
       category,
+      tags: editingTags,
       subtasks: editingSubtasks,
       reminder: editingReminder,
+      recurrence: editingRecurrence,
+      notes: editingNotes,
+      notesUpdatedAt: editingNotes !== task.notes ? new Date().toISOString() : task.notesUpdatedAt,
     });
 
     setIsEditing(false);
@@ -333,6 +352,16 @@ export default function TaskDetails({ task, onBack, onUpdate, onDelete, userCoor
                 </div>
               </div>
 
+              {/* Custom Tags in Edit Mode */}
+              <div>
+                <TagManagerInput
+                  tags={editingTags}
+                  onChange={setEditingTags}
+                  existingTags={existingTags}
+                  compact
+                />
+              </div>
+
               {/* Priority Selector in Edit Mode */}
               <div>
                 <label className="text-[10px] uppercase tracking-widest font-bold text-neutral-400 mb-1.5 block">
@@ -459,6 +488,13 @@ export default function TaskDetails({ task, onBack, onUpdate, onDelete, userCoor
                 </div>
               </div>
 
+              {/* Recurrence in Edit Mode */}
+              <RecurrenceSelector
+                rule={editingRecurrence}
+                onChange={setEditingRecurrence}
+                baseDueDate={computedEditDueDate}
+              />
+
               {/* Reminders in Edit Mode */}
               <ReminderFormSection
                 reminder={editingReminder}
@@ -467,6 +503,18 @@ export default function TaskDetails({ task, onBack, onUpdate, onDelete, userCoor
                 onChange={setEditingReminder}
                 userCoords={userCoords}
               />
+
+              {/* Rich Notes in Edit Mode */}
+              <div className="pt-2 border-t border-neutral-100">
+                <TaskRichNotes
+                  initialNotes={editingNotes}
+                  notesUpdatedAt={task.notesUpdatedAt}
+                  taskTitle={title || task.title}
+                  onSave={(notesHtml) => {
+                    setEditingNotes(notesHtml);
+                  }}
+                />
+              </div>
             </div>
 
             <div className="flex items-center gap-3 pt-4">
@@ -534,6 +582,12 @@ export default function TaskDetails({ task, onBack, onUpdate, onDelete, userCoor
                           <span>{priorityConfig.label} Priority</span>
                         </div>
                       )}
+                      {task.notes && task.notes.replace(/<[^>]*>/g, '').trim().length > 0 && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border shrink-0 bg-teal-50 text-teal-700 border-teal-200">
+                          <FileText size={12} className="text-teal-600 shrink-0" />
+                          <span>Notes</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -598,6 +652,65 @@ export default function TaskDetails({ task, onBack, onUpdate, onDelete, userCoor
                         </button>
                       );
                     })}
+                  </div>
+
+                  {/* Custom Tags Quick Manager in Display Mode */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mr-1 flex items-center gap-1">
+                      <Hash size={11} /> Tags:
+                    </span>
+                    {(task.tags || []).map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-neutral-900 text-white text-[11px] font-semibold"
+                      >
+                        <span className="text-neutral-400">#</span>
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = (task.tags || []).filter((t) => t !== tag);
+                            onUpdate(task.id, { tags: updated });
+                          }}
+                          className="text-neutral-400 hover:text-white ml-0.5"
+                          title={`Remove #${tag}`}
+                        >
+                          <X size={11} />
+                        </button>
+                      </span>
+                    ))}
+                    {(task.tags || []).length < 20 && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const cleaned = normalizeTag(quickTagInput);
+                          if (!cleaned) return;
+                          const current = task.tags || [];
+                          if (!current.some((t) => t.toLowerCase() === cleaned.toLowerCase())) {
+                            onUpdate(task.id, { tags: [...current, cleaned] });
+                          }
+                          setQuickTagInput('');
+                        }}
+                        className="inline-flex items-center gap-1"
+                      >
+                        <input
+                          type="text"
+                          value={quickTagInput}
+                          onChange={(e) => setQuickTagInput(e.target.value)}
+                          placeholder="+ Add tag"
+                          maxLength={30}
+                          className="w-24 px-2 py-0.5 text-[11px] bg-neutral-50 border border-neutral-200 rounded-md focus:outline-none focus:border-neutral-900 focus:bg-white text-neutral-800 placeholder:text-neutral-400"
+                        />
+                        {normalizeTag(quickTagInput) && (
+                          <button
+                            type="submit"
+                            className="px-2 py-0.5 rounded-md bg-neutral-900 text-white text-[10px] font-bold hover:bg-neutral-800"
+                          >
+                            Add
+                          </button>
+                        )}
+                      </form>
+                    )}
                   </div>
                 </div>
               </div>
@@ -718,6 +831,53 @@ export default function TaskDetails({ task, onBack, onUpdate, onDelete, userCoor
                         <span className="text-xs font-medium text-neutral-400">No location set</span>
                       </div>
                     </div>
+                  )}
+                </div>
+
+                {/* RECURRING SCHEDULE CARD */}
+                <div className="p-4 bg-purple-50/60 rounded-2xl border border-purple-100/90 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-purple-600 text-white rounded-lg shadow-xs">
+                        <Repeat size={16} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                          Recurring Repetition
+                        </h4>
+                        <p className="text-[10px] text-purple-700 font-medium">
+                          {task.recurrence ? 'Task automatically repeats' : 'No repetition set'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(true)}
+                      className="text-[10px] font-bold text-purple-700 bg-purple-100/80 hover:bg-purple-200/80 px-2.5 py-1 rounded-lg transition-colors"
+                    >
+                      {task.recurrence ? 'Change' : 'Set Repeat'}
+                    </button>
+                  </div>
+
+                  {task.recurrence ? (
+                    <div className="p-3 bg-white rounded-xl border border-purple-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-purple-600 shrink-0 animate-pulse" />
+                        <span className="text-xs font-bold text-purple-950">
+                          {getRecurrenceDescription(task.recurrence)}
+                        </span>
+                      </div>
+                      {task.recurrence.timesRepeated ? (
+                        <span className="text-[11px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md">
+                          Repeated {task.recurrence.timesRepeated}×
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-neutral-500 font-medium pl-1">
+                      Set this task to repeat daily, weekly, or monthly so you never miss a routine task.
+                    </p>
                   )}
                 </div>
 
@@ -964,6 +1124,18 @@ export default function TaskDetails({ task, onBack, onUpdate, onDelete, userCoor
                 <Plus size={15} />
                 <span>Add Subtask with Options</span>
               </button>
+            </div>
+
+            {/* RICH TEXT NOTES & DOCUMENTATION SECTION */}
+            <div className="p-6 bg-white border-b border-neutral-100">
+              <TaskRichNotes
+                initialNotes={task.notes}
+                notesUpdatedAt={task.notesUpdatedAt}
+                taskTitle={task.title}
+                onSave={(notesHtml) => {
+                  onUpdate(task.id, { notes: notesHtml, notesUpdatedAt: new Date().toISOString() });
+                }}
+              />
             </div>
 
             {/* TIME TRACKING SECTION */}

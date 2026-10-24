@@ -1,5 +1,13 @@
 {
 	"appId": "app.tasktracker",
 	"appName": "Task Tracker",
-	"webDir": "dist"
+	"webDir": "dist",
+	"plugins": {
+		"FirebaseAuthentication": {
+			"skipNativeAuth": false,
+			"providers": [
+				"google.com"
+			]
+		}
+	}
 }
