@@ -23,6 +23,10 @@ import {
   playReminderChime, 
   triggerBrowserNotification 
 } from '../lib/reminderUtils';
+import {
+  requestNotificationsPermission,
+  requestLocationPermission,
+} from '../lib/permissionsService';
 import { cn } from '../lib/utils';
 
 interface ReminderFormSectionProps {
@@ -173,7 +177,8 @@ export default function ReminderFormSection({
   };
 
   // Handle GPS button (Use current position)
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = async () => {
+    await requestLocationPermission();
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -200,7 +205,8 @@ export default function ReminderFormSection({
     }
   };
 
-  const handleTestAlert = () => {
+  const handleTestAlert = async () => {
+    await requestNotificationsPermission();
     playReminderChime();
     triggerBrowserNotification('🔔 Reminder Test', 'Your task reminders are working smoothly!');
     setTestSuccess(true);
@@ -252,7 +258,13 @@ export default function ReminderFormSection({
             <input
               type="checkbox"
               checked={timeEnabled}
-              onChange={(e) => setTimeEnabled(e.target.checked)}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                setTimeEnabled(enabled);
+                if (enabled) {
+                  requestNotificationsPermission();
+                }
+              }}
               className="sr-only peer"
             />
             <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
@@ -431,7 +443,14 @@ export default function ReminderFormSection({
             <input
               type="checkbox"
               checked={locEnabled}
-              onChange={(e) => setLocEnabled(e.target.checked)}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                setLocEnabled(enabled);
+                if (enabled) {
+                  requestLocationPermission();
+                  requestNotificationsPermission();
+                }
+              }}
               className="sr-only peer"
             />
             <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-600"></div>

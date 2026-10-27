@@ -27,6 +27,7 @@ import {
 } from './lib/authService';
 import AndroidAuthModal from './components/AndroidAuthModal';
 import FirebaseAuthDiagnosticsModal from './components/FirebaseAuthDiagnosticsModal';
+import AppPermissionsModal from './components/AppPermissionsModal';
 import { db, auth, OperationType, handleFirestoreError } from './lib/firebase';
 import type { Task, View, TaskCategory } from './types';
 import TaskCard from './components/TaskCard';
@@ -62,6 +63,7 @@ export default function App() {
   const [authDiagnostic, setAuthDiagnostic] = useState<AuthDiagnosticInfo | null>(null);
   const [showAndroidAuthModal, setShowAndroidAuthModal] = useState(false);
   const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false);
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [authTab, setAuthTab] = useState<'google' | 'email'>('google');
   const [emailMode, setEmailMode] = useState<'login' | 'signup'>('login');
   const [emailVal, setEmailVal] = useState('');
@@ -762,7 +764,15 @@ export default function App() {
         </div>
 
         {/* Minimal Subtle Footer Links */}
-        <div className="mt-5 flex items-center justify-center gap-3 text-xs text-neutral-400">
+        <div className="mt-5 flex items-center justify-center gap-3 text-xs text-neutral-400 flex-wrap">
+          <button
+            onClick={() => setShowPermissionsModal(true)}
+            className="hover:text-neutral-700 transition-colors flex items-center gap-1.5 font-medium"
+          >
+            <Bell size={13} />
+            <span>Permissions</span>
+          </button>
+          <span>·</span>
           <button
             onClick={() => setShowDiagnosticsModal(true)}
             className="hover:text-neutral-700 transition-colors flex items-center gap-1.5 font-medium"
@@ -794,6 +804,11 @@ export default function App() {
           initialError={authError}
           onSelectEmailMode={() => { setAuthTab('email'); setAuthError(null); }}
           onSelectGuestMode={() => { handleGuestSignIn(); }}
+        />
+
+        <AppPermissionsModal
+          isOpen={showPermissionsModal}
+          onClose={() => setShowPermissionsModal(false)}
         />
       </div>
     );
@@ -909,6 +924,13 @@ export default function App() {
                     {user.email}
                   </span>
                 )}
+                <button 
+                  onClick={() => setShowPermissionsModal(true)}
+                  className="p-2 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-blue-600 transition-colors"
+                  title="App Permissions (Notifications, GPS Location, Microphone)"
+                >
+                  <Bell size={20} />
+                </button>
                 <button 
                   onClick={() => setShowDiagnosticsModal(true)}
                   className="p-2 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-amber-700 transition-colors"
@@ -1287,6 +1309,11 @@ export default function App() {
         isOpen={showDiagnosticsModal}
         onClose={() => setShowDiagnosticsModal(false)}
         initialError={authError}
+      />
+
+      <AppPermissionsModal
+        isOpen={showPermissionsModal}
+        onClose={() => setShowPermissionsModal(false)}
       />
 
       <OfflineIndicator />
