@@ -64,8 +64,25 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      # Restore the permanent signing key so the SHA-1 registered in Firebase stays valid
+      - name: Restore signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/tasktracker.keystore
+            echo "Signing key restored"
+          else
+            echo "::warning::ANDROID_KEYSTORE_BASE64 secret not set - APK will use a throwaway debug key and Google sign-in will fail"
+          fi
+          if [ ! -f android/app/google-services.json ]; then
+            echo "::warning::android/app/google-services.json missing - Firebase native sign-in will not work"
+          fi
+
       - name: Build debug APK
         working-directory: android   # the Gradle project lives in this subfolder
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           if [ -f gradlew ]; then
             chmod +x gradlew

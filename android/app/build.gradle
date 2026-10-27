@@ -16,10 +16,33 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Permanent signing key (kept out of git; CI restores it from the
+    // ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD secrets).
+    // A stable key keeps the SHA-1 fingerprint registered in Firebase valid.
+    def ttKeystore = file('tasktracker.keystore')
+    def ttKeystorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
+    signingConfigs {
+        tasktracker {
+            if (ttKeystore.exists() && ttKeystorePassword) {
+                storeFile ttKeystore
+                storePassword ttKeystorePassword
+                keyAlias 'tasktracker'
+                keyPassword ttKeystorePassword
+            }
+        }
+    }
     buildTypes {
+        debug {
+            if (ttKeystore.exists() && ttKeystorePassword) {
+                signingConfig signingConfigs.tasktracker
+            }
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (ttKeystore.exists() && ttKeystorePassword) {
+                signingConfig signingConfigs.tasktracker
+            }
         }
     }
 }
