@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "203549493374",
+    "project_id": "iconsouth-engine",
+    "storage_bucket": "iconsouth-engine.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:203549493374:android:8522e30d7624305414b02f",
+        "android_client_info": {
+          "package_name": "app.tasktracker"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "203549493374-4oaq8lp3hsp9lu79oi33crbbuafl5b81.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAO7PizHi0ETabnEO6V4kQGZ94R7mNnugE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "203549493374-4oaq8lp3hsp9lu79oi33crbbuafl5b81.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
